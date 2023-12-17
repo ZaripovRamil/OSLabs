@@ -1,0 +1,40 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <time.h>
+
+int main() {
+   pid_t pid1, pid2;
+   pid1 = fork();
+   if (pid1 < 0) {
+       perror("Fork failed");
+       return 1;
+   }
+
+   if (pid1 == 0) {
+      struct timespec ts;
+      clock_gettime(CLOCK_REALTIME, &ts);
+      struct tm *tm = localtime(&ts.tv_sec);
+      printf("Child 1: PID = %d, Parent PID = %d, Time = %02d:%02d:%02d.%03d\n", getpid(), getppid(), tm->tm_hour,tm->tm_min, tm->tm_sec, ts.tv_nsec/1000000);
+      return 0;
+   }
+   pid2 = fork();
+   if (pid2 < 0) {
+      perror("Fork failed");
+      return 1;
+   }
+
+   if (pid2 == 0) {
+      struct timespec ts;
+      clock_gettime(CLOCK_REALTIME, &ts);
+      struct tm *tm = localtime(&ts.tv_sec);
+      printf("Child 2: PID = %d, Parent PID = %d, Time = %02d:%02d:%02d.%03d\n", getpid(), getppid(), tm->tm_hour,tm->tm_min, tm->tm_sec, ts.tv_nsec/1000000);
+      return 0;
+   }
+   struct timespec ts;
+   clock_gettime(CLOCK_REALTIME, &ts);
+   struct tm *tm = localtime(&ts.tv_sec);
+   printf("Parent: PID = %d, Time = %02d:%02d:%02d.%03d\n", getpid(), tm->tm_hour,tm->tm_min, tm->tm_sec, ts.tv_nsec/1000000);
+   system("ps -x");
+   return 0;
+}
