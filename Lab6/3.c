@@ -9,6 +9,9 @@
 void copy_file(const char *source, const char *destination) {
    FILE *src, *dst;
    char ch;
+   pid_t pid;
+   pid = getpid();
+   printf("Process with pid = %d copies file %s\n", pid, source);
    src = fopen(source, "r");
    dst = fopen(destination, "w");
    while ((ch = fgetc(src)) != EOF)
