@@ -9,15 +9,19 @@
 void copy_file(const char *source, const char *destination) {
    FILE *src, *dst;
    char ch;
+   struct stat st;
+   stat(source, &st);
    pid_t pid;
    pid = getpid();
-   printf("Process with pid = %d copies file %s\n", pid, source);
+   printf("Process with pid = %d copies file %s of size %ld\n", pid, source, st.st_size);
    src = fopen(source, "r");
    dst = fopen(destination, "w");
    while ((ch = fgetc(src)) != EOF)
        fputc(ch, dst);
    fclose(src);
    fclose(dst);
+   chmod(destination, st.st_mode);
+   chown(destination, st.st_uid, st.st_gid);
 }
 
 void split_copy_dir(char *source, char *destination, int thread, int totalThreads) {
@@ -28,12 +32,12 @@ void split_copy_dir(char *source, char *destination, int thread, int totalThread
     {
 	if(strcmp(dir->d_name, ".") == 0 ||strcmp(dir->d_name, "..") ==0)
 	    continue;
-	struct stat st;
         char srcpath[1024], dstpath[1024];
 	sprintf(srcpath, "%s/%s", source, dir->d_name);
 	sprintf(dstpath, "%s/%s", destination, dir->d_name);
 	struct stat src_st;
-	stat(srcpath, &src_st);
+	if(stat(dstpath, &src_st)==0)
+		continue;
 	if(S_ISDIR(src_st.st_mode))
 		continue;
         if((i%totalThreads) == thread)
