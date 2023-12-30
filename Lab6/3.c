@@ -24,6 +24,14 @@ void copy_file(const char *source, const char *destination, int batchNumber) {
    chown(destination, st.st_uid, st.st_gid);
 }
 
+void printThreads()
+{
+   pid_t pid = getpid();
+   char command[1024];
+   sprintf(command, "ps --ppid %d", pid);
+   system(command);
+}
+
 int main(int argc, char *argv[]) {
    pid_t pid = getpid();
    char *srcdir = argv[1];
@@ -53,6 +61,8 @@ printf("Batch %d started\n", batchNumber);
 		copy_file(srcpath, dstpath, batchNumber);
 		return 0;
 	}
+	printf("A fork has happened. Thread info shown below:\n");
+	printThreads();
     }
     else continueFlag = -1;
 }
