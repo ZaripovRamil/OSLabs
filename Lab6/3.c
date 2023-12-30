@@ -6,14 +6,14 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
-void copy_file(const char *source, const char *destination) {
+void copy_file(const char *source, const char *destination, int batchNumber) {
    FILE *src, *dst;
    char ch;
    struct stat st;
    stat(source, &st);
    pid_t pid;
    pid = getpid();
-   printf("Process with pid = %d copies file %s of size %ld\n", pid, source, st.st_size);
+   printf("Process with pid = %d copies file %s of size %ld in batch %d\n", pid, source, st.st_size, batchNumber);
    src = fopen(source, "r");
    dst = fopen(destination, "w");
    while ((ch = fgetc(src)) != EOF)
@@ -24,42 +24,41 @@ void copy_file(const char *source, const char *destination) {
    chown(destination, st.st_uid, st.st_gid);
 }
 
-void split_copy_dir(char *source, char *destination, int thread, int totalThreads) {
-    DIR *d = opendir(source);
-    struct dirent *dir;
-    int i = 0;
-    while((dir = readdir(d)) != NULL)
-    {
-	if(strcmp(dir->d_name, ".") == 0 ||strcmp(dir->d_name, "..") ==0)
-	    continue;
-        char srcpath[1024], dstpath[1024];
-	sprintf(srcpath, "%s/%s", source, dir->d_name);
-	sprintf(dstpath, "%s/%s", destination, dir->d_name);
-	struct stat src_st;
-	if(stat(dstpath, &src_st)==0)
-		continue;
-	if(S_ISDIR(src_st.st_mode))
-		continue;
-        if((i%totalThreads) == thread)
-	{
-	    copy_file(srcpath, dstpath);
-	}
-	i+=1;
-    }
-}
-
 int main(int argc, char *argv[]) {
    pid_t pid = getpid();
    char *srcdir = argv[1];
    char *dstdir = argv[2];
    int n = atoi(argv[3]);
-   int i;
-      for(i = 0; i<n;i++){
-          pid = fork();
-          if(pid == 0){
-     		split_copy_dir(srcdir, dstdir, i, n);
+   int batchNumber = 0;
+   DIR *d = opendir(srcdir);
+    struct dirent *dir;
+   int continueFlag = 0;
+   while(continueFlag == 0){
+printf("Batch %d started\n", batchNumber);
+   for(int i = 0; i< n;i++){
+   if((dir = readdir(d)) != NULL)
+   {
+	if(strcmp(dir->d_name, ".") == 0 ||strcmp(dir->d_name, "..") ==0)
+	    continue;
+        char srcpath[1024], dstpath[1024];
+	sprintf(srcpath, "%s/%s", srcdir, dir->d_name);
+	sprintf(dstpath, "%s/%s", dstdir, dir->d_name);
+	struct stat src_st;
+	if(stat(dstpath, &src_st)==0)
+		continue;
+	if(S_ISDIR(src_st.st_mode))
+		continue;
+        pid = fork();
+	if(pid == 0){
+		copy_file(srcpath, dstpath, batchNumber);
 		return 0;
-          }
-       }
+	}
+    }
+    else continueFlag = -1;
+}
+while(wait()>0){}
+printf("Batch %d finished\n", batchNumber);
+batchNumber++;
+}
    return 0;
 }
